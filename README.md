@@ -62,6 +62,9 @@ Requirements: Node.js (>=16) and npm.
 - Add unit tests for favorites and localStorage behavior.
 - Consider paginating search results / infinite scroll.
 
+# Deployment
+https://reactmoviefind.netlify.app/
+
 
 ## Contributing
 
