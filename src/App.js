@@ -1,100 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import './App.css';
-import { OMDB_API_KEY } from './config';
-
-// SearchBar component
-function SearchBar({ value, onChange, onSearch }) {
-  return (
-    <form
-      className="flex gap-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSearch();
-      }}
-    >
-      <input
-        className="w-full md:w-64 px-3 py-2 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-600"
-        placeholder="Search movie title..."
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
-      <button
-        type="submit"
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-      >
-        Search
-      </button>
-    </form>
-  );
-}
-
-function MovieCard({ movie, isFav, onToggleFav }) {
-  return (
-    <div className="bg-white dark:bg-gray-800 shadow rounded overflow-hidden">
-      <img
-        src={movie.Poster && movie.Poster !== 'N/A' ? movie.Poster : 'https://via.placeholder.com/300x445?text=No+Image'}
-        alt={movie.Title}
-        className="w-full h-72 object-cover"
-      />
-      <div className="p-3">
-        <div className="flex justify-between items-start">
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-            {movie.Title} <span className="text-sm text-gray-500 dark:text-gray-400">({movie.Year})</span>
-          </h3>
-          <button
-            onClick={() => onToggleFav(movie)}
-            className={`px-2 py-1 text-sm rounded ${isFav ? 'bg-yellow-400' : 'bg-gray-200 dark:bg-gray-600'}`}
-          >
-            {isFav ? '★' : '☆'}
-          </button>
-        </div>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{movie.Plot && movie.Plot !== 'N/A' ? movie.Plot : 'No description available.'}</p>
-        <div className="mt-3 text-sm text-gray-700 dark:text-gray-200">
-          <strong>IMDB rating:</strong> {movie.imdbRating || 'N/A'}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function FavoritesList({ favorites, onRemove }) {
-  if (!favorites || favorites.length === 0) {
-    return <div className="text-gray-500 dark:text-gray-400">No favorites yet.</div>;
-  }
-
-  return (
-    <div className="space-y-2">
-      {favorites.map((m) => (
-        <div key={m.imdbID} className="flex items-center gap-3 bg-white dark:bg-gray-800 p-2 rounded shadow">
-          <img
-            src={m.Poster && m.Poster !== 'N/A' ? m.Poster : 'https://via.placeholder.com/80x120?text=No+Image'}
-            alt={m.Title}
-            className="w-14 h-20 object-cover rounded"
-          />
-          <div className="flex-1">
-            <div className="font-medium text-gray-900 dark:text-gray-100">{m.Title}</div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">{m.Year}</div>
-          </div>
-          <button
-            onClick={() => onRemove(m)}
-            className="px-3 py-1 bg-red-500 text-white rounded"
-          >
-            Remove
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-}
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import Home from './pages/Home';
+import Search from './pages/Search';
+import Favorites from './pages/Favorites';
 
 // Main App
 function App() {
-  const [query, setQuery] = useState('');
-  const [movies, setMovies] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  // API key from config
-  const apiKey = OMDB_API_KEY;
   const [favorites, setFavorites] = useState(() => {
     try {
       const raw = localStorage.getItem('favorites');
@@ -104,47 +15,28 @@ function App() {
     }
   });
 
+  const [isDark, setIsDark] = useState(() => {
+    try {
+      const raw = localStorage.getItem('theme');
+      if (raw) return JSON.parse(raw);
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    } catch {
+      return false;
+    }
+  });
+
   useEffect(() => {
     localStorage.setItem('favorites', JSON.stringify(favorites));
   }, [favorites]);
 
-  // apiKey comes from src/config.js
-
-  const search = async () => {
-    setError('');
-    if (!apiKey) {
-      setError('OMDb API key missing in app configuration.');
-      return;
+  useEffect(() => {
+    localStorage.setItem('theme', JSON.stringify(isDark));
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
     }
-
-    if (!query) return;
-    setLoading(true);
-    try {
-      // First search by title to get list
-      const sres = await fetch(`https://www.omdbapi.com/?apikey=${encodeURIComponent(apiKey)}&s=${encodeURIComponent(query)}`);
-      const sjson = await sres.json();
-      if (sjson.Response === 'False') {
-        setMovies([]);
-        setError(sjson.Error || 'No results');
-        setLoading(false);
-        return;
-      }
-
-      // Fetch full details for each result (to get Plot and Ratings)
-      const details = await Promise.all(
-        sjson.Search.slice(0, 12).map(async (item) => {
-          const r = await fetch(`https://www.omdbapi.com/?apikey=${encodeURIComponent(apiKey)}&i=${item.imdbID}&plot=short`);
-          return r.json();
-        })
-      );
-
-      setMovies(details);
-    } catch (err) {
-      setError(err.message || 'Fetch error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [isDark]);
 
   const toggleFav = (movie) => {
     setFavorites((prev) => {
@@ -158,58 +50,121 @@ function App() {
     setFavorites((prev) => prev.filter((p) => p.imdbID !== movie.imdbID));
   };
 
+  const toggleTheme = () => {
+    setIsDark((prev) => !prev);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-6 text-gray-900 dark:text-gray-100">
-      <div className="max-w-6xl mx-auto">
-        <header className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">Movie Explorer</h1>
-            <p className="text-gray-600 dark:text-gray-400">Search movies, view details and save favorites (stored locally).</p>
+    <Router>
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        {/* Navigation Bar */}
+        <nav className="bg-white dark:bg-gray-800 shadow">
+          <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-6">
+              <Link to="/" className="text-2xl font-bold text-blue-600">
+                Movie Explorer
+              </Link>
+            <div className="flex gap-4">
+                <Link
+                  to="/"
+                  className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
+                >
+                  Home
+                </Link>
+                <Link
+                  to="/search"
+                  className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
+                >
+                  Search
+                </Link>
+                <Link
+                  to="/favorites"
+                  className="text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
+                >
+                  Favorites ({favorites.length})
+                </Link>
+              </div>
+            </div>
+            <button
+              onClick={toggleTheme}
+              className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600"
+            >
+              {isDark ? '☀️ Light' : '🌙 Dark'}
+            </button>
           </div>
-        </header>
+        </nav>
 
-        {/* increase favorites column by using 5 columns and giving aside 2 spans */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-          <main className="md:col-span-3">
-            <div className="mb-4 flex flex-col gap-2">
-              <div className="mt-2">
-                <SearchBar value={query} onChange={setQuery} onSearch={search} />
-              </div>
-            </div>
-
-            {error && <div className="text-red-600 mb-3">{error}</div>}
-
-            {loading && (
-              <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300 mb-3">
-                <div className="h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
-                <span className="sr-only">Loading</span>
-                <div>Loading results...</div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {movies.map((m) => (
-                <MovieCard
-                  key={m.imdbID}
-                  movie={m}
-                  isFav={favorites.some((f) => f.imdbID === m.imdbID)}
-                  onToggleFav={toggleFav}
-                />
-              ))}
-            </div>
-          </main>
-
-          <aside className="md:col-span-2">
-            <div className="bg-white dark:bg-gray-800 p-4 rounded shadow h-full">
-              <h2 className="font-semibold mb-3 text-gray-900 dark:text-gray-100">Favorites</h2>
-              <div className="max-h-[70vh] overflow-auto">
-                <FavoritesList favorites={favorites} onRemove={removeFav} />
-              </div>
-            </div>
-          </aside>
+        {/* Routes */}
+        <div className="p-6">
+          <div className="max-w-6xl mx-auto">
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <div>
+                    <header className="mb-6">
+                      <h1 className="text-3xl font-bold">Movie Explorer</h1>
+                      <p className="text-gray-600 dark:text-gray-400">Browse and discover movies.</p>
+                    </header>
+                    <Home favorites={favorites} onToggleFav={toggleFav} />
+                  </div>
+                }
+              />
+              <Route
+                path="/search"
+                element={
+                  <div>
+                    <header className="mb-6">
+                      <h1 className="text-3xl font-bold">Search Movies</h1>
+                      <p className="text-gray-600 dark:text-gray-400">Find movies by title and save your favorites (stored locally).</p>
+                    </header>
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                      <Search favorites={favorites} onToggleFav={toggleFav} />
+                      <aside className="md:col-span-2">
+                        <div className="bg-white dark:bg-gray-800 p-4 rounded shadow h-full sticky top-6">
+                          <h2 className="font-semibold mb-3">Favorites</h2>
+                          <div className="max-h-[70vh] overflow-auto">
+                            {favorites.length === 0 ? (
+                              <div className="text-gray-500 dark:text-gray-400">No favorites yet.</div>
+                            ) : (
+                              <div className="space-y-2">
+                                {favorites.map((m) => (
+                                  <div key={m.imdbID} className="flex items-center gap-3 bg-gray-50 dark:bg-gray-700 p-2 rounded">
+                                    <img
+                                      src={m.Poster && m.Poster !== 'N/A' ? m.Poster : 'https://via.placeholder.com/80x120?text=No+Image'}
+                                      alt={m.Title}
+                                      className="w-10 h-16 object-cover rounded"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-medium text-sm truncate">{m.Title}</div>
+                                      <div className="text-xs text-gray-500 dark:text-gray-400">{m.Year}</div>
+                                    </div>
+                                    <button
+                                      onClick={() => removeFav(m)}
+                                      className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </aside>
+                    </div>
+                  </div>
+                }
+              />
+              <Route
+                path="/favorites"
+                element={<Favorites favorites={favorites} onRemove={removeFav} />}
+              />
+            </Routes>
+          </div>
         </div>
       </div>
-    </div>
+    </Router>
   );
 }
 

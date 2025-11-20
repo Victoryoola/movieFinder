@@ -5,8 +5,10 @@ A small React app to search movies via the OMDb API, view details (poster, year,
 ## Features
 
 - Search movies by title (OMDb).
+- React Routing
 - Display poster, title, year, short plot and IMDb rating.
-- Save / remove favorites persisted to localStorage.
+- Home page displays most popular movies for each letter of the Alphabet
+- CRUD operations for movie favortites (Add, and Delete).
 - Responsive layout (grid + favorites sidebar).
 
 ## Tech stack
@@ -32,6 +34,10 @@ Requirements: Node.js (>=16) and npm.
 ## File structure (important files)
 
 - src/
+  - pages/
+    - favorites.js
+    - home.js
+    - search.js
   - App.js — main app & components (SearchBar, MovieCard, FavoritesList)
   - config.js — OMDb API key (exported)
   - index.js, index.css — app entry & styles
@@ -53,6 +59,7 @@ Requirements: Node.js (>=16) and npm.
 ## Limitations & notes
 
 - OMDb API rate limits / free plan restrictions apply.
+- Home pages displays a predefined list of popular movies
 - If you keep the Tailwind CDN, some dark styles may not apply when toggling the theme button.
 
 ## Development notes
