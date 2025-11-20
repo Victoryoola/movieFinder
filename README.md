@@ -10,6 +10,7 @@ A small React app to search movies via the OMDb API, view details (poster, year,
 - Home page displays most popular movies for each letter of the Alphabet
 - CRUD operations for movie favortites (Add, and Delete).
 - Responsive layout (grid + favorites sidebar).
+- Light and Dark mode feature
 
 ## Tech stack
 
